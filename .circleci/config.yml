@@ -4,6 +4,14 @@ jobs:
   test:
     docker:
       - image: cimg/go:1.24
+      - image: cimg/postgres:16.2
+        environment:
+          POSTGRES_USER: deploytrack
+          POSTGRES_PASSWORD: deploytrack
+          POSTGRES_DB: deploytrack
+    environment:
+      TEST_DATABASE_URL: postgres://deploytrack:deploytrack@localhost:5432/deploytrack?sslmode=disable
+      TEST_RESULTS: /tmp/test-results
     steps:
       - checkout
       - run:
@@ -13,8 +21,20 @@ jobs:
           name: Build
           command: go build ./...
       - run:
-          name: Unit tests
-          command: go test ./internal/metrics/...
+          name: Wait for Postgres
+          command: bash scripts/wait-for-db.sh localhost 5432
+      - run:
+          name: Install gotestsum
+          command: go install gotest.tools/gotestsum@v1.12.0
+      - run:
+          name: Run tests
+          command: |
+            mkdir -p "$TEST_RESULTS"
+            gotestsum --junitfile "$TEST_RESULTS/gotestsum-report.xml" -- ./...
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/test-results
 
 workflows:
   build-and-test:
