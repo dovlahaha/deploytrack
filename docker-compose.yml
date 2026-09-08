@@ -1,0 +1,10 @@
+# Local development only. CI runs Postgres as a sidecar container instead.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: deploytrack
+      POSTGRES_PASSWORD: deploytrack
+      POSTGRES_DB: deploytrack
+    ports:
+      - "5432:5432"

@@ -1,0 +1,4 @@
+.git
+.circleci
+test-results
+*.md

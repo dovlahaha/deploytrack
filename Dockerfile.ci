@@ -1,0 +1,14 @@
+# Build image used by the pipeline itself.
+#
+# Pinning the toolchain and test tooling here means every job runs against the
+# same versions, and the install cost is paid once when this image is built
+# rather than on every pipeline run.
+FROM golang:1.24-alpine
+
+RUN apk add --no-cache bash git curl docker-cli aws-cli ca-certificates
+
+# gotestsum wraps `go test` and emits JUnit XML, which is the format CircleCI
+# collects for its test insights.
+RUN go install gotest.tools/gotestsum@v1.12.0
+
+WORKDIR /workspace
