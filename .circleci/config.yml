@@ -1,9 +1,22 @@
 version: 2.1
 
 jobs:
+  build-ci-image:
+    docker:
+      - image: cimg/base:2024.01
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build and push CI image
+          command: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            docker build -t ghcr.io/dovlahaha/deploytrack-ci:<< pipeline.git.revision >> -f Dockerfile.ci .
+            docker push ghcr.io/dovlahaha/deploytrack-ci:<< pipeline.git.revision >>
+
   test:
     docker:
-      - image: cimg/go:1.24
+      - image: ghcr.io/dovlahaha/deploytrack-ci:<< pipeline.git.revision >>
       - image: cimg/postgres:16.2
         environment:
           POSTGRES_USER: deploytrack
@@ -24,9 +37,6 @@ jobs:
           name: Wait for Postgres
           command: bash scripts/wait-for-db.sh localhost 5432
       - run:
-          name: Install gotestsum
-          command: go install gotest.tools/gotestsum@v1.12.0
-      - run:
           name: Run tests
           command: |
             mkdir -p "$TEST_RESULTS"
@@ -39,4 +49,8 @@ jobs:
 workflows:
   build-and-test:
     jobs:
-      - test
+      - build-ci-image:
+          context: ghcr
+      - test:
+          requires:
+            - build-ci-image
