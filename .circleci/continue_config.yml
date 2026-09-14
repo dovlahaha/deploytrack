@@ -1,0 +1,95 @@
+version: 2.1
+
+parameters:
+  rebuild-ci-image:
+    type: boolean
+    default: false
+  code-changed:
+    type: boolean
+    default: false
+  always-run:
+    type: boolean
+    default: true
+
+orbs:
+  aws-cli: circleci/aws-cli@5.1
+  aws-ecr: circleci/aws-ecr@9.3.7
+
+jobs:
+  build-ci-image:
+    docker:
+      - image: cimg/base:2024.01
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build and push CI image
+          command: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            docker build \
+              -t ghcr.io/dovlahaha/deploytrack-ci:<< pipeline.git.revision >> \
+              -t ghcr.io/dovlahaha/deploytrack-ci:main \
+              -f Dockerfile.ci .
+            docker push ghcr.io/dovlahaha/deploytrack-ci:<< pipeline.git.revision >>
+            docker push ghcr.io/dovlahaha/deploytrack-ci:main
+
+  test:
+    docker:
+      - image: ghcr.io/dovlahaha/deploytrack-ci:main
+      - image: cimg/postgres:16.2
+        environment:
+          POSTGRES_USER: deploytrack
+          POSTGRES_PASSWORD: deploytrack
+          POSTGRES_DB: deploytrack
+    environment:
+      TEST_DATABASE_URL: postgres://deploytrack:deploytrack@localhost:5432/deploytrack?sslmode=disable
+      TEST_RESULTS: /tmp/test-results
+    steps:
+      - checkout
+      - run:
+          name: Download dependencies
+          command: go mod download
+      - run:
+          name: Build
+          command: go build ./...
+      - run:
+          name: Wait for Postgres
+          command: bash scripts/wait-for-db.sh localhost 5432
+      - run:
+          name: Run tests
+          command: |
+            mkdir -p "$TEST_RESULTS"
+            gotestsum --junitfile "$TEST_RESULTS/gotestsum-report.xml" -- ./...
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/test-results
+
+workflows:
+  build-and-test:
+    jobs:
+      - build-ci-image:
+          context: ghcr
+          when: << pipeline.parameters.rebuild-ci-image >>
+      - test:
+          requires:
+            - build-ci-image
+          when:
+            or:
+              - << pipeline.parameters.code-changed >>
+              - << pipeline.parameters.rebuild-ci-image >>
+      - aws-ecr/build_and_push_image:
+          name: publish
+          context: aws-ecr
+          requires: [test]
+          filters:
+            branches:
+              only: main
+          auth:
+            - aws-cli/setup:
+                role_arn: $AWS_ROLE_ARN
+                region: $AWS_REGION
+          account_id: $AWS_ACCOUNT_ID
+          region: $AWS_REGION
+          repo: deploytrack
+          tag: << pipeline.git.revision >>,latest
