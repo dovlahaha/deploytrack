@@ -12,3 +12,4 @@ RUN apk add --no-cache bash git curl docker-cli aws-cli ca-certificates
 RUN go install gotest.tools/gotestsum@v1.12.0
 
 WORKDIR /workspace
+# no-op: force rebuild-ci-image so :main gets its first push
