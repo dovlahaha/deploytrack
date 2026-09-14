@@ -9,7 +9,7 @@ RUN apk add --no-cache bash git curl docker-cli aws-cli ca-certificates
 
 # gotestsum wraps `go test` and emits JUnit XML, which is the format CircleCI
 # collects for its test insights.
-RUN go install gotest.tools/gotestsum@v1.12.0
+RUN go install gotest.tools/gotestsum@v1.13.0
 
 # Trivy scans go.sum for known CVEs in our dependencies, pre-installed here
 # for the same reason as gotestsum: pay the install cost once, at image build
