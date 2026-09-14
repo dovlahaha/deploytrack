@@ -15,6 +15,23 @@ orbs:
   aws-cli: circleci/aws-cli@5.1
   aws-ecr: circleci/aws-ecr@9.3.7
 
+commands:
+  run-tests:
+    description: Wait for the database, run the suite, and collect its results
+    steps:
+      - run:
+          name: Wait for Postgres
+          command: bash scripts/wait-for-db.sh localhost 5432
+      - run:
+          name: Run tests
+          command: |
+            mkdir -p "$TEST_RESULTS"
+            gotestsum --junitfile "$TEST_RESULTS/gotestsum-report.xml" -- ./...
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/test-results
+
 jobs:
   build-ci-image:
     docker:
@@ -56,18 +73,7 @@ jobs:
       - run:
           name: Build
           command: go build ./...
-      - run:
-          name: Wait for Postgres
-          command: bash scripts/wait-for-db.sh localhost 5432
-      - run:
-          name: Run tests
-          command: |
-            mkdir -p "$TEST_RESULTS"
-            gotestsum --junitfile "$TEST_RESULTS/gotestsum-report.xml" -- ./...
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
+      - run-tests
 
 workflows:
   build-and-test:
