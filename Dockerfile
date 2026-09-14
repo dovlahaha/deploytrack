@@ -1,6 +1,6 @@
 # Runtime image for the service. Multi-stage so the shipped image contains the
 # binary and nothing else: no compiler, no source, no package manager.
-FROM golang:1.24-alpine AS build
+FROM golang:1.26-alpine AS build
 WORKDIR /src
 
 COPY go.mod go.sum ./

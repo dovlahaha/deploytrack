@@ -3,7 +3,7 @@
 # Pinning the toolchain and test tooling here means every job runs against the
 # same versions, and the install cost is paid once when this image is built
 # rather than on every pipeline run.
-FROM golang:1.24-alpine
+FROM golang:1.26-alpine
 
 RUN apk add --no-cache bash git curl docker-cli aws-cli ca-certificates
 
