@@ -66,18 +66,19 @@ jobs:
           path: /tmp/test-results
 
 workflows:
-  build-and-test:
+  build-ci-image-workflow:
+    when: << pipeline.parameters.rebuild-ci-image >>
     jobs:
       - build-ci-image:
           context: ghcr
-          when: << pipeline.parameters.rebuild-ci-image >>
-      - test:
-          requires:
-            - build-ci-image
-          when:
-            or:
-              - << pipeline.parameters.code-changed >>
-              - << pipeline.parameters.rebuild-ci-image >>
+
+  test-and-publish:
+    when:
+      or:
+        - << pipeline.parameters.code-changed >>
+        - << pipeline.parameters.rebuild-ci-image >>
+    jobs:
+      - test
       - aws-ecr/build_and_push_image:
           name: publish
           context: aws-ecr
