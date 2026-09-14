@@ -1,5 +1,9 @@
 version: 2.1
 
+orbs:
+  aws-cli: circleci/aws-cli@5.1
+  aws-ecr: circleci/aws-ecr@9.3.7
+
 jobs:
   build-ci-image:
     docker:
@@ -54,3 +58,18 @@ workflows:
       - test:
           requires:
             - build-ci-image
+      - aws-ecr/build_and_push_image:
+          name: publish
+          context: aws-ecr
+          requires: [test]
+          filters:
+            branches:
+              only: main
+          auth:
+            - aws-cli/setup:
+                role_arn: $AWS_ROLE_ARN
+                region: $AWS_REGION
+          account_id: $AWS_ACCOUNT_ID
+          region: $AWS_REGION
+          repo: deploytrack
+          tag: << pipeline.git.revision >>,latest
