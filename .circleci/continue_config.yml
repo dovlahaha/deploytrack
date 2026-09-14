@@ -68,6 +68,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Scan dependencies for vulnerabilities
+          command: |
+            trivy fs --exit-code 1 --severity HIGH,CRITICAL --no-progress .
+      - run:
           name: Download dependencies
           command: go mod download
       - run:

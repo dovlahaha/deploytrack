@@ -11,5 +11,9 @@ RUN apk add --no-cache bash git curl docker-cli aws-cli ca-certificates
 # collects for its test insights.
 RUN go install gotest.tools/gotestsum@v1.12.0
 
+# Trivy scans go.sum for known CVEs in our dependencies, pre-installed here
+# for the same reason as gotestsum: pay the install cost once, at image build
+# time, instead of on every pipeline run.
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
 WORKDIR /workspace
-# no-op: force rebuild-ci-image to verify the single-workflow ordering fix
