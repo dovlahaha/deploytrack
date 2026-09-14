@@ -1,8 +1,8 @@
 // Package metrics computes software-delivery metrics from deployment events.
 //
-// It deliberately has no database or framework dependencies: it operates on a
-// plain slice of Events, which keeps it fast to unit test and makes the tests
-// meaningful without any infrastructure.
+// It has no database or framework dependencies: it operates on a plain slice
+// of Events, which keeps it fast to unit test and makes the tests meaningful
+// without any infrastructure.
 package metrics
 
 import "time"
