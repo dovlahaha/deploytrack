@@ -23,8 +23,12 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build and push CI image
+          name: Build and push CI image (if Dockerfile.ci changed)
           command: |
+            if [ "<< pipeline.parameters.rebuild-ci-image >>" != "true" ]; then
+              echo "Dockerfile.ci unchanged; reusing the existing :main image"
+              exit 0
+            fi
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
             docker build \
               -t ghcr.io/dovlahaha/deploytrack-ci:<< pipeline.git.revision >> \
@@ -66,19 +70,17 @@ jobs:
           path: /tmp/test-results
 
 workflows:
-  build-ci-image-workflow:
-    when: << pipeline.parameters.rebuild-ci-image >>
-    jobs:
-      - build-ci-image:
-          context: ghcr
-
-  test-and-publish:
+  build-and-test:
     when:
       or:
         - << pipeline.parameters.code-changed >>
         - << pipeline.parameters.rebuild-ci-image >>
     jobs:
-      - test
+      - build-ci-image:
+          context: ghcr
+      - test:
+          requires:
+            - build-ci-image
       - aws-ecr/build_and_push_image:
           name: publish
           context: aws-ecr
